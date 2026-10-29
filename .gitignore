@@ -9,3 +9,4 @@ data/
 node_modules/
 frontend/dist/
 backend/scripts/seed_invitations.py
+*.tar.gz
