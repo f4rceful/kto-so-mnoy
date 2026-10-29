@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.venv
+.pytest_cache
+**/__pycache__
+**/*.pyc
+**/node_modules
+frontend/dist
+tests
+data
+*.db
+.DS_Store
+backend/scripts/seed_invitations.py
+README.md

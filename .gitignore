@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+*.db
+.DS_Store
+node_modules/
+frontend/dist/
+backend/scripts/seed_invitations.py
