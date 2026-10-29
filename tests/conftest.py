@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
-from app import db, notifications
+from app import citylist, db, notifications
 from app.config import settings
 from app.main import app
 from app.max_client import SendResult, max_client
@@ -92,6 +92,7 @@ def database(monkeypatch):
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     db.Base.metadata.create_all(engine)
     monkeypatch.setattr(db.SessionLocal, "kw", {**db.SessionLocal.kw, "bind": engine})
+    monkeypatch.setattr(citylist, "seed_builtin", lambda session: 0)
     return engine
 
 

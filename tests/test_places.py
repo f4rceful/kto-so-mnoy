@@ -1,12 +1,13 @@
 from helpers import TATARSTAN, as_user, find_city, seed_cities
 
 from app import db
+from app.citylist import BUILTIN_CSV, parse_csv, seed_builtin, utc_offset
 from app.config import settings
 from app.db import City, SessionLocal
 from app.names import norm_city, norm_school
 from app.places import CUSTOM_PLACES_LIMIT, backfill_legacy_profiles
 from app.regions import REGIONS, region_from_dataset
-from scripts.import_cities import import_cities, utc_offset
+from scripts.import_cities import import_cities
 
 
 def test_name_normalization():
@@ -208,3 +209,19 @@ def test_custom_places_quota(client):
     for n in range(CUSTOM_PLACES_LIMIT):
         assert client.put("/api/me", json={"school": f"Школа номер {n}"}, headers=as_user(3)).status_code == 200
     assert client.put("/api/me", json={"school": "Школа сверх лимита"}, headers=as_user(3)).status_code == 429
+
+
+def test_builtin_cities_are_loaded_once(database):
+    with SessionLocal() as s:
+        s.add(City(region=TATARSTAN, name="Своё село", name_norm="своё село", custom=True))
+        s.commit()
+        assert seed_builtin(s) > 1000, "встроенный справочник загружается в базу без встроенных городов"
+        assert seed_builtin(s) == 0, "повторный старт ничего не добавляет"
+        kazan = s.query(City).filter_by(region=TATARSTAN, name_norm=norm_city("Казань")).one()
+        assert kazan.custom is False and kazan.population and kazan.utc_offset == 180
+        assert s.query(City).filter_by(name="Своё село").one().custom is True
+
+
+def test_builtin_city_file_is_readable():
+    rows = parse_csv(BUILTIN_CSV.read_text(encoding="utf-8"))
+    assert len(rows) > 1000 and {"region_type", "region", "city", "timezone", "population"} <= set(rows[0])

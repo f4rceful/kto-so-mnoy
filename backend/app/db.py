@@ -196,10 +196,12 @@ class Block(Base):
 
 
 def init_db() -> None:
+    from .citylist import seed_builtin
     from .places import backfill_legacy_profiles
 
     Base.metadata.create_all(engine)
     with SessionLocal() as session:
+        seed_builtin(session)
         backfill_legacy_profiles(session)
         backfill_invitation_places(session)
 
