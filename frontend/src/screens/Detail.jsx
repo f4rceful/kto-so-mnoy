@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, IconButton, Typography } from '@maxhub/max-ui';
-import { api, openContact } from '../api';
+import { addToCalendar, api, openContact } from '../api';
 import { useLoad, useNotify, useShare } from '../hooks';
 import Markdown from '../Markdown';
 import Responses from '../Responses';
@@ -136,6 +136,13 @@ export default function Detail({ id, interests, onChanged, onEdit, onBack }) {
   const left = inv.max_participants - inv.accepted;
   const full = left <= 0;
   const when = formatWhen(inv, { fallback: 'Договоримся в чате' });
+  const saveToCalendar = async () => {
+    try {
+      await addToCalendar({ file: inv.calendar_url, google: inv.calendar_google_url });
+    } catch {
+      notify('Не удалось добавить в календарь');
+    }
+  };
 
   return (
     <>
@@ -173,6 +180,11 @@ export default function Detail({ id, interests, onChanged, onEdit, onBack }) {
         <div className="d-facts">
           <Fact wide icon={<CalendarIcon />} label="Когда">
             <b>{when}</b>
+            {inv.calendar_url && isOpen && !past && (
+              <button type="button" className="d-link d-calendar" onClick={saveToCalendar}>
+                Добавить в календарь
+              </button>
+            )}
           </Fact>
           <Fact icon={inv.fmt === 'online' ? <GlobeIcon /> : <PinIcon />} label="Формат">
             <b>{FORMAT[inv.fmt]}</b>

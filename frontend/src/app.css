@@ -435,3 +435,5 @@ html:has(.app-root[class*="colorScheme_light"]) body { background: #f7f8fb; }
 
 html:has(.app-root[class*="colorScheme_dark"]),
 html:has(.app-root[class*="colorScheme_dark"]) body { background: #17181c; }
+.d-fact .d-calendar { align-self: flex-start; padding: 2px 0; color: var(--text-themed); text-decoration: none; font-weight: 500; }
+.app-root[class*="colorScheme_light"] .d-fact .d-calendar { color: #005fcc; }

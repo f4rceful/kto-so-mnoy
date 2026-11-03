@@ -3,7 +3,7 @@ from datetime import timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import terms
+from . import ics, terms
 from .config import settings
 from .db import Invitation, Response, User
 from .max_client import max_client
@@ -97,6 +97,8 @@ def inv_out(inv: Invitation, me: User, with_responses: bool = False) -> dict:
         "edited": inv.edited_at is not None,
         "edited_at": utc_iso(inv.edited_at),
         "link": _app_link(f"inv_{inv.id}"),
+        "calendar_url": ics.calendar_path(inv),
+        "calendar_google_url": ics.google_path(inv),
         "is_mine": is_mine,
         "hidden": inv.hidden if is_mine else False,
         "hidden_reason": inv.hidden_reason if is_mine else "",

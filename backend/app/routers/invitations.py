@@ -3,13 +3,14 @@ from datetime import date, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi import Response as HttpResponse
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
-from .. import notifications
+from .. import ics, notifications
 from ..blocks import blocked_pair_ids
-from ..db import Invitation, Report, Response, User, now
+from ..db import City, Invitation, Report, Response, User, now
 from ..deps import consenting_user, current_user, get_db
 from ..interests import INTERESTS
 from ..notifications import EDIT_FIELDS, when_text
@@ -185,6 +186,32 @@ def detail(inv_id: int, db: Session = Depends(get_db), me: User = Depends(curren
     out = inv_out(inv, me, with_responses=True)
     out["reported"] = bool(db.scalar(select(Report.id).where(Report.invitation_id == inv.id, Report.reporter_id == me.id)))
     return out
+
+
+def calendar_invitation(db: Session, inv_id: int, token: str) -> tuple[Invitation, int | None]:
+    if not ics.verify(inv_id, token):
+        raise HTTPException(404, "Приглашение не найдено")
+    inv = load_invitation(db, inv_id)
+    if inv.hidden or not inv.when_date:
+        raise HTTPException(404, "Приглашение не найдено")
+    offset = db.scalar(select(City.utc_offset).where(City.id == inv.city_id)) if inv.city_id else None
+    return inv, offset
+
+
+@router.get("/api/invitations/{inv_id}/calendar.ics")
+def calendar_file(inv_id: int, t: str = "", db: Session = Depends(get_db)):
+    inv, offset = calendar_invitation(db, inv_id, t)
+    return HttpResponse(
+        content=ics.build(inv, offset),
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'inline; filename="{ics.FILENAME}"'},
+    )
+
+
+@router.get("/api/invitations/{inv_id}/google-calendar")
+def google_calendar(inv_id: int, t: str = "", db: Session = Depends(get_db)):
+    inv, offset = calendar_invitation(db, inv_id, t)
+    return RedirectResponse(ics.google_link(inv, offset), status_code=302)
 
 
 @router.post("/api/invitations", status_code=201)

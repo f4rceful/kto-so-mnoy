@@ -123,6 +123,28 @@ export function openMaxUrl(url) {
   else window.open(url, '_blank', 'noopener');
 }
 
+const isIos = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+const absolute = (path) => new URL(path, location.origin).href;
+
+export async function addToCalendar({ file, google }) {
+  const link = absolute(isIos() ? file : google);
+  let opened = false;
+  try {
+    if (webApp?.openLink) {
+      webApp.openLink(link);
+      opened = true;
+    }
+  } catch {
+    opened = false;
+  }
+  if (opened) return;
+  if (webApp?.downloadFile) {
+    await webApp.downloadFile(absolute(file), 'kto-so-mnoy.ics');
+    return;
+  }
+  window.open(link, '_blank', 'noopener');
+}
+
 export const openContact = (username) => openMaxUrl(`https://max.ru/${username}`);
 
 export const bridge = webApp;
