@@ -1,3 +1,7 @@
+button, [role="button"], a, label, [class*="MaxUi"], [class*="cell"], [class*="segment"] {
+  -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+}
+button:focus:not(:focus-visible) { outline: none; }
 .app-root { min-height: 100vh; background: var(--background-primary); color: var(--text-primary); }
 .app-root[class*="colorScheme_light"] { --background-card: #eff1f5; }
 .app-root[class*="colorScheme_light"] .sheet-narrow { --background-card: #fff; }
@@ -12,6 +16,7 @@
 .between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .muted { color: var(--text-secondary); }
 .center { display: flex; justify-content: center; padding: 48px 0; }
+.boot-error { min-height: 100vh; box-sizing: border-box; padding-bottom: 8px; align-items: center; justify-content: center; text-align: center; }
 .empty { text-align: center; padding: 40px 16px; color: var(--text-secondary); }
 
 .bottom-bar, .bottom-nav {
@@ -95,8 +100,7 @@
 
 .profile-page { gap: 16px; }
 .p-head { display: flex; align-items: center; gap: 16px; padding-top: 8px; }
-.p-avatar { flex: none; padding: 3px; border-radius: 50%; line-height: 0; background: linear-gradient(135deg, var(--g1), var(--g2)); }
-.p-avatar > * { box-shadow: 0 0 0 3px var(--background-primary); border-radius: 50%; }
+.p-avatar { flex: none; border-radius: 50%; line-height: 0; }
 .p-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
 .p-gear {
   flex: none; align-self: flex-start; width: 40px; height: 40px; margin: -4px -8px 0 0; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
@@ -114,6 +118,10 @@
 }
 .notice b, .notice-go { color: color-mix(in srgb, var(--g1) 55%, #fff); }
 .notice-go { flex: none; font-weight: 600; }
+
+.app-root[class*="colorScheme_light"] .tag,
+.app-root[class*="colorScheme_light"] .notice b,
+.app-root[class*="colorScheme_light"] .notice-go { color: color-mix(in srgb, var(--g1) 80%, #000); }
 
 .ni-count { text-align: right; font-size: 12px; color: var(--text-secondary); }
 .ni-presets { justify-content: center; }
@@ -406,8 +414,9 @@ html:has(.app-root[class*="colorScheme_light"]) body { background: #f7f8fb; }
 }
 
 .p-gear { transition: background-color 0.25s ease; }
+.p-gear:active { background-color: color-mix(in srgb, var(--text-primary) 14%, transparent); }
 @media (hover: hover) {
-  .p-gear:hover { background-color: #eeeff2; }
+  .p-gear:hover { background-color: color-mix(in srgb, var(--text-primary) 10%, transparent); }
 }
 @media (prefers-reduced-motion: reduce) { .p-gear { transition: none; } }
 .app-root[class*="colorScheme_light"] .badge { background: #314a5a; }

@@ -71,12 +71,10 @@ export default function App() {
   if (boot.loading) return <Loading />;
   if (boot.error) {
     return (
-      <div className="page">
-        <div className="hero">
-          <Typography.Headline variant="large-strong">Не удалось открыть</Typography.Headline>
-          <Typography.Body variant="medium" className="muted">{boot.error.message}</Typography.Body>
-        </div>
-        <Button stretched onClick={load}>Повторить</Button>
+      <div className="page boot-error" role="alert">
+        <Typography.Headline variant="large-strong">Не удалось открыть</Typography.Headline>
+        <Typography.Body variant="medium" className="muted">{boot.error.message}</Typography.Body>
+        <Button size="large" onClick={load}>Повторить</Button>
       </div>
     );
   }

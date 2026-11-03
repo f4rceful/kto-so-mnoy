@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { CellSimple, Switch, Typography } from '@maxhub/max-ui';
 import { api, openMaxUrl } from '../api';
-import { useLoad, useNotify } from '../hooks';
-import { BotNotice, LegalSheet, interestName } from '../components';
+import { useNotify } from '../hooks';
+import { BotNotice, LegalLoader, interestName } from '../components';
 import { BlockedEditor, GradeEditor, InterestsEditor, NameEditor, SchoolEditor } from './SettingsEditors';
+
+const DOCS = [
+  { id: 'terms', title: 'Условия использования' },
+  { id: 'privacy', title: 'Политика обработки данных' },
+];
 
 const interestsSummary = (me, interests) => {
   if (!me.interests.length) return 'Не выбраны';
@@ -17,7 +22,6 @@ export default function Settings({ me, interests, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [switches, setSwitches] = useState({ notify: me.notify, notify_activity: me.notify_activity });
   const show = useNotify();
-  const terms = useLoad(() => api.terms(), []);
 
   const save = async (patch) => {
     setBusy(true);
@@ -43,7 +47,6 @@ export default function Settings({ me, interests, onSaved }) {
   };
 
   const close = () => setEditing(null);
-  const docs = terms.data?.documents ?? [];
 
   return (
     <>
@@ -110,7 +113,7 @@ export default function Settings({ me, interests, onSaved }) {
         <section className="settings-section">
           <Typography.Label variant="medium" className="muted">О сервисе</Typography.Label>
           <div className="cell-stack">
-            {docs.map((d) => (
+            {DOCS.map((d) => (
               <CellSimple key={d.id} surface="island" title={d.title} showChevron onClick={() => setEditing({ doc: d })} />
             ))}
           </div>
@@ -122,7 +125,7 @@ export default function Settings({ me, interests, onSaved }) {
       {editing === 'grade' && <GradeEditor me={me} busy={busy} onSave={save} onClose={close} />}
       {editing === 'interests' && <InterestsEditor me={me} interests={interests} busy={busy} onSave={save} onClose={close} />}
       {editing === 'blocked' && <BlockedEditor onClose={close} />}
-      {editing?.doc && <LegalSheet doc={editing.doc} onClose={close} />}
+      {editing?.doc && <LegalLoader id={editing.doc.id} title={editing.doc.title} onClose={close} />}
     </>
   );
 }

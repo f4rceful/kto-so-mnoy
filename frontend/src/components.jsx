@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BottomSheet, Button, IconButton, Spinner, Typography } from '@maxhub/max-ui';
+import { api } from './api';
+import { useLoad } from './hooks';
 import { ArrowUpIcon, BackIcon, CheckIcon, ChevronIcon, FeedIcon, PlusIcon, ProfileIcon } from './icons';
 
 const SHOW_AFTER = 500;
@@ -208,20 +210,47 @@ export function ConfirmSheet({ open, title, text, action, busy, onClose, onConfi
   );
 }
 
+function LegalBody({ doc }) {
+  return (
+    <>
+      {doc.updated && <Typography.Body variant="small" className="muted">Редакция от {doc.updated}</Typography.Body>}
+      {doc.sections.map((section) => (
+        <section key={section.title}>
+          <Typography.Body variant="medium-strong">{section.title}</Typography.Body>
+          {section.paragraphs.map((text, i) => (
+            <Typography.Body key={i} variant="small">{text}</Typography.Body>
+          ))}
+        </section>
+      ))}
+    </>
+  );
+}
+
 export function LegalSheet({ doc, onClose }) {
   return (
     <Sheet title={doc.title} onClose={onClose}>
       <div className="legal">
-        {doc.updated && <Typography.Body variant="small" className="muted">Редакция от {doc.updated}</Typography.Body>}
-        {doc.sections.map((section) => (
-          <section key={section.title}>
-            <Typography.Body variant="medium-strong">{section.title}</Typography.Body>
-            {section.paragraphs.map((text, i) => (
-              <Typography.Body key={i} variant="small">{text}</Typography.Body>
-            ))}
-          </section>
-        ))}
+        <LegalBody doc={doc} />
       </div>
+      <Button type="button" stretched size="large" onClick={onClose}>Закрыть</Button>
+    </Sheet>
+  );
+}
+
+export function LegalLoader({ id, title, onClose }) {
+  const terms = useLoad(() => api.terms(), []);
+  const doc = terms.data?.documents.find((d) => d.id === id);
+  return (
+    <Sheet title={title} onClose={onClose}>
+      {doc ? (
+        <div className="legal">
+          <LegalBody doc={doc} />
+        </div>
+      ) : terms.loading ? (
+        <Loading />
+      ) : (
+        <ErrorState error={terms.error} onRetry={terms.reload} />
+      )}
       <Button type="button" stretched size="large" onClick={onClose}>Закрыть</Button>
     </Sheet>
   );
