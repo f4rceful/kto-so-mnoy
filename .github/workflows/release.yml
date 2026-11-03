@@ -1,0 +1,68 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=match,pattern=v(.*),group=1
+            type=raw,value=latest
+
+      - name: Build and push (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build amd64 archive
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: kto-so-mnoy:${{ github.ref_name }}
+          cache-from: type=gha
+
+      - name: Save archive and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          docker tag "kto-so-mnoy:${GITHUB_REF_NAME}" "kto-so-mnoy:${VERSION}"
+          docker save "kto-so-mnoy:${VERSION}" | gzip > kto-so-mnoy.tar.gz
+          printf 'Запуск из реестра:\n```\ndocker pull %s:%s\n```\n\nЗапуск из архива (linux/amd64):\n```\ndocker load -i kto-so-mnoy.tar.gz\n```\n' "${IMAGE}" "${VERSION}" > notes.md
+          gh release create "${GITHUB_REF_NAME}" kto-so-mnoy.tar.gz \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            || gh release upload "${GITHUB_REF_NAME}" kto-so-mnoy.tar.gz --clobber
