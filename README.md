@@ -1,10 +1,13 @@
-# Кто со мной?
+<img src="https://i.ibb.co/T6jvMy3/Frame-233.png" width="220" align="left" alt="Кто со мной?">
 
-Бот и мини-приложение в MAX для поиска компании по интересам среди школьников.
-Хакатон "Идея фикс"
+<h3>Кто со мной?</h3>
 
+Бот и мини-приложение в MAX для поиска компании по интересам среди школьников.<br>
+Хакатон "Идея фикс".
 Один Docker-образ собирает фронтенд (React + Vite) и бэкенд (FastAPI) и отдаёт на порту 8000 и API, и мини-приложение.
 Данные хранятся в PostgreSQL
+
+<br clear="left">
 
 ## Что понадобится
 
@@ -154,10 +157,17 @@ docker run -d --name kto-app --network kto --restart unless-stopped \
 
 Если образ собирается на Mac с Apple Silicon для обычного сервера, добавьте к `docker build` флаг `--platform linux/amd64`
 
-### Запуск из готового архива образа
+### Запуск готового образа
 
-Если образ передан файлом `kto-so-mnoy.tar.gz`, вместо `docker build` загрузите его (команда одинакова во всех системах),
-затем выполните команды `docker network create` и `docker run` выше, указав образ `kto-so-mnoy:1.0`:
+Собранный образ опубликован в GitHub Container Registry. Вместо `docker build` скачайте его (команда одинакова
+во всех системах), затем выполните команды `docker network create` и `docker run` выше, указав образ
+`ghcr.io/f4rceful/kto-so-mnoy:1.1`:
+
+```bash
+docker pull ghcr.io/f4rceful/kto-so-mnoy:1.1
+```
+
+Если образ передан файлом `kto-so-mnoy.tar.gz`, загрузите его и укажите в `docker run` образ `kto-so-mnoy:1.1`:
 
 ```bash
 docker load -i kto-so-mnoy.tar.gz
