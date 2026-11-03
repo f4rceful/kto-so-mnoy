@@ -23,7 +23,7 @@ export function CategoryStep({ groups, group, onGroup, interests, interest, onCh
       </HScroll>
       <div className="chips">
         {group?.items.map((i) => (
-          <Button key={i.id} type="button" size="medium" variant={interest === i.id ? 'primary' : 'secondary'} onClick={() => onChange(i.id)}>
+          <Button key={i.id} type="button" size="small" variant={interest === i.id ? 'primary' : 'secondary'} onClick={() => onChange(i.id)}>
             {i.name}
           </Button>
         ))}
