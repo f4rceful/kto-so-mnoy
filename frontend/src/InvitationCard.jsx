@@ -13,7 +13,7 @@ const GROUP_COLORS = {
   'Отдых и общение': '#06b6d4',
 };
 const FALLBACK_COLOR = '#6b7cff';
-const AVATAR_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
+const AVATAR_COLORS = ['#2563eb', '#7c3aed', '#047857', '#b45309', '#dc2626', '#0e7490', '#be185d'];
 
 export const colorOf = (interests, id) => GROUP_COLORS[interests.find((i) => i.id === id)?.group] ?? FALLBACK_COLOR;
 

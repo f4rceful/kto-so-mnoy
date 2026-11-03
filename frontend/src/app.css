@@ -3,8 +3,6 @@ button, [role="button"], a, label, [class*="MaxUi"], [class*="cell"], [class*="s
 }
 button:focus:not(:focus-visible) { outline: none; }
 .app-root { min-height: 100vh; background: var(--background-primary); color: var(--text-primary); }
-.app-root[class*="colorScheme_light"] { --background-card: #eff1f5; }
-.app-root[class*="colorScheme_light"] .sheet-narrow { --background-card: #fff; }
 
 :root { --app-max-width: 480px; }
 .shell { max-width: var(--app-max-width); margin: 0 auto; min-height: 100vh; }
@@ -23,7 +21,7 @@ button:focus:not(:focus-visible) { outline: none; }
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 5;
   width: 100%; max-width: var(--app-max-width); box-sizing: border-box;
   background: var(--background-primary);
-  border-top: 1px solid var(--border-primary, transparent);
+  border-top: 1px solid var(--border-primary, rgba(128, 128, 128, 0.25));
 }
 .bottom-nav { border-top: 0; }
 .bottom-nav::before {
@@ -420,3 +418,20 @@ html:has(.app-root[class*="colorScheme_light"]) body { background: #f7f8fb; }
 }
 @media (prefers-reduced-motion: reduce) { .p-gear { transition: none; } }
 .app-root[class*="colorScheme_light"] .badge { background: #314a5a; }
+.app-root[class*="colorScheme_light"] .inv-cat { color: color-mix(in srgb, var(--c) 62%, #000); }
+.app-root[class*="colorScheme_light"] .inv-chip.good { color: #176b2f; background: rgba(23, 107, 47, 0.12); }
+.app-root[class*="colorScheme_light"] .inv-chip.warn { color: #9a5b00; background: rgba(154, 91, 0, 0.12); }
+.app-root[class*="colorScheme_light"] .inv-chip.mine,
+.app-root[class*="colorScheme_light"] .bottom-nav > button.on { color: #005fcc; }
+.app-root[class*="colorScheme_light"] .pill-count { color: #314a5a; background: rgba(49, 74, 90, 0.14); }
+.app-root[class*="colorScheme_light"] .inv-card,
+.app-root[class*="colorScheme_light"] .card,
+.app-root[class*="colorScheme_light"] .d-fact,
+.app-root[class*="colorScheme_light"] .d-author,
+.app-root[class*="colorScheme_light"] .d-resp,
+.app-root[class*="colorScheme_light"] .d-empty,
+.app-root[class*="colorScheme_light"] .cat,
+.app-root[class*="colorScheme_light"] .stat { box-shadow: 0 0 0 1px rgba(49, 74, 90, 0.07), 0 1px 3px rgba(49, 74, 90, 0.06); }
+
+html:has(.app-root[class*="colorScheme_dark"]),
+html:has(.app-root[class*="colorScheme_dark"]) body { background: #17181c; }
