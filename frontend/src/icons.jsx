@@ -1,3 +1,5 @@
+import { Bold, Eraser, Italic, List, ListOrdered, Redo2, Undo2 } from 'lucide-react';
+
 function Icon({ size = 24, stroke = 2, decorative = false, children }) {
   return (
     <svg
@@ -42,6 +44,11 @@ export const ShareIcon = () => <Icon size={22} decorative><path d="M12 15V4M8 8l
 export const AcceptIcon = () => <Icon size={18} stroke={2.4} decorative><path d="m5 12.5 4.5 4.5L19 7" /></Icon>;
 export const DeclineIcon = () => <Icon size={18} stroke={2.4} decorative><path d="M6 6l12 12M18 6 6 18" /></Icon>;
 
-export const UndoIcon = () => <Icon size={20}><path d="M9 14 4 9l5-5" /><path d="M4 9h9a6 6 0 0 1 0 12h-2" /></Icon>;
-export const RedoIcon = () => <Icon size={20}><path d="m15 14 5-5-5-5" /><path d="M20 9h-9a6 6 0 0 0 0 12h2" /></Icon>;
-export const BulletListIcon = () => <Icon size={20}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" strokeWidth="3" /></Icon>;
+const editorIcon = (Glyph) => () => <Glyph size={20} strokeWidth={2} />;
+export const UndoIcon = editorIcon(Undo2);
+export const RedoIcon = editorIcon(Redo2);
+export const BoldIcon = editorIcon(Bold);
+export const ItalicIcon = editorIcon(Italic);
+export const BulletListIcon = editorIcon(List);
+export const NumberedListIcon = editorIcon(ListOrdered);
+export const EraserIcon = editorIcon(Eraser);

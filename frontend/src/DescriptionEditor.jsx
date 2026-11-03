@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Textarea, Typography } from '@maxhub/max-ui';
 import Markdown from './Markdown';
-import { BulletListIcon, RedoIcon, UndoIcon } from './icons';
+import { BoldIcon, BulletListIcon, EraserIcon, ItalicIcon, NumberedListIcon, RedoIcon, UndoIcon } from './icons';
 import { clearFormatting, continueList, createHistory, formatState, toggleInline, toggleList } from './mdEdit';
 
 export default function DescriptionEditor({ value, onChange, max }) {
@@ -93,13 +93,13 @@ export default function DescriptionEditor({ value, onChange, max }) {
         {button('undo', 'Отменить', <UndoIcon />, { onClick: undo, disabled: !history.canUndo })}
         {button('redo', 'Повторить', <RedoIcon />, { onClick: redo, disabled: !history.canRedo })}
         <span className="fmt-sep" />
-        {button('bold', 'Жирный', <b>B</b>, { onClick: actions.bold, pressed: state.bold })}
-        {button('italic', 'Курсив', <i>I</i>, { onClick: actions.italic, pressed: state.italic })}
+        {button('bold', 'Жирный', <BoldIcon />, { onClick: actions.bold, pressed: state.bold })}
+        {button('italic', 'Курсив', <ItalicIcon />, { onClick: actions.italic, pressed: state.italic })}
         <span className="fmt-sep" />
         {button('ul', 'Маркированный список', <BulletListIcon />, { onClick: actions.ul, pressed: state.ul })}
-        {button('ol', 'Нумерованный список', <span>1.</span>, { onClick: actions.ol, pressed: state.ol })}
+        {button('ol', 'Нумерованный список', <NumberedListIcon />, { onClick: actions.ol, pressed: state.ol })}
         <span className="fmt-sep" />
-        {button('clear', 'Очистить форматирование', <span>T<sub>x</sub></span>, { onClick: actions.clear, disabled: !hasFormat })}
+        {button('clear', 'Очистить форматирование', <EraserIcon />, { onClick: actions.clear, disabled: !hasFormat })}
       </div>
 
       <Textarea
