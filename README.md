@@ -161,13 +161,15 @@ docker run -d --name kto-app --network kto --restart unless-stopped \
 
 Собранный образ опубликован в GitHub Container Registry. Вместо `docker build` скачайте его (команда одинакова
 во всех системах), затем выполните команды `docker network create` и `docker run` выше, указав образ
-`ghcr.io/f4rceful/kto-so-mnoy:1.1`:
+`ghcr.io/f4rceful/kto-so-mnoy:latest`:
 
 ```bash
-docker pull ghcr.io/f4rceful/kto-so-mnoy:1.1
+docker pull ghcr.io/f4rceful/kto-so-mnoy:latest
 ```
 
-Если образ передан файлом `kto-so-mnoy.tar.gz`, загрузите его и укажите в `docker run` образ `kto-so-mnoy:1.1`:
+Нужная версия указывается вместо `latest`, например `1.2`. Список версий есть на странице [релизов](https://github.com/f4rceful/kto-so-mnoy/releases).
+
+Если образ передан файлом `kto-so-mnoy.tar.gz`, загрузите его и укажите в `docker run` образ `kto-so-mnoy:latest`:
 
 ```bash
 docker load -i kto-so-mnoy.tar.gz

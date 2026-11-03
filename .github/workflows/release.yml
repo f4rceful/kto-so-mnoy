@@ -60,7 +60,8 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           docker tag "kto-so-mnoy:${GITHUB_REF_NAME}" "kto-so-mnoy:${VERSION}"
-          docker save "kto-so-mnoy:${VERSION}" | gzip > kto-so-mnoy.tar.gz
+          docker tag "kto-so-mnoy:${GITHUB_REF_NAME}" kto-so-mnoy:latest
+          docker save "kto-so-mnoy:${VERSION}" kto-so-mnoy:latest | gzip > kto-so-mnoy.tar.gz
           printf 'Запуск из реестра:\n```\ndocker pull %s:%s\n```\n\nЗапуск из архива (linux/amd64):\n```\ndocker load -i kto-so-mnoy.tar.gz\n```\n' "${IMAGE}" "${VERSION}" > notes.md
           gh release create "${GITHUB_REF_NAME}" kto-so-mnoy.tar.gz \
             --title "${GITHUB_REF_NAME}" \
