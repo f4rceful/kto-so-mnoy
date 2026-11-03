@@ -4,6 +4,7 @@ import { api, bridge, startInvitationId } from './api';
 import { useBackButton } from './hooks';
 import { BackButton, BottomNav, Loading, ScrollTopButton } from './components';
 import { pendingCount } from './InvitationCard';
+import { readSessionJSON, writeSessionJSON } from './storage';
 import Detail from './screens/Detail';
 import EditInvitation from './screens/EditInvitation';
 import Feed from './screens/Feed';
@@ -12,14 +13,33 @@ import Profile from './screens/Profile';
 import Registration from './screens/Registration';
 import Settings from './screens/Settings';
 
+const NAV_KEY = 'kto-so-mnoy:nav';
+const TABS = ['feed', 'profile'];
+
+const restorable = (screen) => (screen?.name === 'detail' && Number.isInteger(screen.id)) || screen?.name === 'settings';
+
+function launchState() {
+  const deep = startInvitationId();
+  const saved = readSessionJSON(NAV_KEY);
+  const fresh = deep && deep !== saved?.deep;
+  if (!saved || fresh) return { deep, deepLink: deep, tab: 'feed', stack: [] };
+  return {
+    deep,
+    deepLink: null,
+    tab: TABS.includes(saved.tab) ? saved.tab : 'feed',
+    stack: Array.isArray(saved.stack) ? saved.stack.filter(restorable) : [],
+  };
+}
+
 export default function App() {
+  const [launch] = useState(launchState);
   const [boot, setBoot] = useState({ loading: true, error: null });
   const [interests, setInterests] = useState([]);
   const [me, setMe] = useState(null);
-  const [tab, setTab] = useState('feed');
-  const [stack, setStack] = useState([]);
+  const [tab, setTab] = useState(launch.tab);
+  const [stack, setStack] = useState(launch.stack);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [deepLink, setDeepLink] = useState(startInvitationId);
+  const [deepLink, setDeepLink] = useState(launch.deepLink);
   const [waiting, setWaiting] = useState(0);
 
   const load = useCallback(() => {
@@ -34,6 +54,10 @@ export default function App() {
     );
   }, []);
   useEffect(load, [load]);
+
+  useEffect(() => {
+    writeSessionJSON(NAV_KEY, { deep: launch.deep, tab, stack: stack.filter(restorable) });
+  }, [launch.deep, tab, stack]);
 
   useEffect(() => {
     if (!me?.onboarded) return undefined;

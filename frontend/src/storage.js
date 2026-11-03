@@ -27,3 +27,18 @@ export function removeStorage(key) {
   } catch {
   }
 }
+
+export function readSessionJSON(key) {
+  try {
+    return JSON.parse(sessionStorage.getItem(key) ?? 'null');
+  } catch {
+    return null;
+  }
+}
+
+export function writeSessionJSON(key, value) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+  }
+}
