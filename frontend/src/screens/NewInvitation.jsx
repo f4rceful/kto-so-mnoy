@@ -32,13 +32,13 @@ const buildPayload = ({ interest, title, description, whenState, fmt, people }) 
 
 export default function NewInvitation({ me, interests, defaultInterest, onCreated, onSaved, editing, backRef }) {
   const groups = useMemo(() => groupInterests(interests), [interests]);
-  const start = editing?.interest ?? defaultInterest ?? interests[0]?.id;
+  const start = editing?.interest ?? null;
   const root = editing ? 'confirm' : 'what';
   const minPeople = Math.max(1, editing?.accepted ?? 0);
   const [step, setStep] = useState(root);
   const [fromSummary, setFromSummary] = useState(false);
   const [interest, setInterest] = useState(start);
-  const [groupTitle, setGroupTitle] = useState(() => interests.find((i) => i.id === start)?.group ?? groups[0]?.title);
+  const [groupTitle, setGroupTitle] = useState(() => interests.find((i) => i.id === (start ?? defaultInterest))?.group ?? groups[0]?.title);
   const [title, setTitle] = useState(editing?.title ?? '');
   const [description, setDescription] = useState(editing?.description ?? '');
   const [whenState, setWhenState] = useState(() => (editing ? whenStateFrom(editing) : EMPTY_WHEN));
