@@ -167,7 +167,7 @@ def feed(
     if response is not None:
         response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
     ids = list(db.scalars(stmt.order_by(*feed_order(sort, taken)).limit(limit).offset(offset)))
-    return [inv_out(i, me) for i in load_in_order(db, ids)]
+    return [inv_out(i, me, brief=True) for i in load_in_order(db, ids)]
 
 
 @router.get("/api/invitations/mine")
@@ -181,7 +181,7 @@ def mine(db: Session = Depends(get_db), me: User = Depends(current_user)):
         )
         .order_by(Invitation.created_at.desc())
     )
-    return [inv_out(i, me, with_responses=True) for i in db.scalars(q)]
+    return [inv_out(i, me, with_responses=True, brief=True) for i in db.scalars(q)]
 
 
 @router.get("/api/invitations/joined")
@@ -193,7 +193,7 @@ def joined(db: Session = Depends(get_db), me: User = Depends(current_user)):
         .options(selectinload(Invitation.responses), selectinload(Invitation.author))
         .order_by(Response.created_at.desc())
     )
-    return [inv_out(i, me) for i in db.scalars(q)]
+    return [inv_out(i, me, brief=True) for i in db.scalars(q)]
 
 
 def visible_to(db: Session, inv: Invitation, me: User) -> bool:

@@ -76,7 +76,21 @@ def accepted_count(inv: Invitation) -> int:
     return sum(1 for r in inv.responses if r.status == "accepted")
 
 
-def inv_out(inv: Invitation, me: User, with_responses: bool = False) -> dict:
+LIST_DESCRIPTION_MAX = 300
+LIST_OMITTED = ("link", "calendar_url", "calendar_google_url", "author_contact", "edited_at", "hidden_reason")
+
+
+def list_description(text: str) -> str:
+    if len(text) <= LIST_DESCRIPTION_MAX:
+        return text
+    cut = text[:LIST_DESCRIPTION_MAX]
+    space = cut.rfind(" ")
+    if space > LIST_DESCRIPTION_MAX - 40:
+        cut = cut[:space]
+    return cut.rstrip() + "…"
+
+
+def inv_out(inv: Invitation, me: User, with_responses: bool = False, brief: bool = False) -> dict:
     mine = next((r for r in inv.responses if r.user_id == me.id), None)
     is_mine = inv.author_id == me.id
     out = {
@@ -105,6 +119,10 @@ def inv_out(inv: Invitation, me: User, with_responses: bool = False) -> dict:
         "my_response": mine.status if mine else None,
         "author_contact": inv.author.username if mine and mine.status == "accepted" else None,
     }
+    if brief:
+        out["description"] = list_description(inv.description)
+        for key in LIST_OMITTED:
+            out.pop(key)
     if with_responses and is_mine:
         out["responses"] = [response_out(r, me) for r in inv.responses]
     return out
