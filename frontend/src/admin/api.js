@@ -31,6 +31,7 @@ export const adminApi = {
   invitations: (params) => call(`/invitations${query(params)}`),
   users: (params) => call(`/users${query(params)}`),
   log: (params) => call(`/log${query(params)}`),
+  links: () => call('/links'),
   metrics: (days) => call(`/metrics${query({ days })}`),
   hide: (id, reason) => call(`/invitations/${id}/hide`, 'POST', { reason }),
   restore: (id) => call(`/invitations/${id}/restore`, 'POST'),

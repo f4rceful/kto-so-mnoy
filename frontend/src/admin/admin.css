@@ -40,6 +40,7 @@ main { max-width: 960px; margin: 0 auto; padding: 16px; }
 .btn.danger { background: var(--danger); }
 .btn.ok { background: var(--ok); }
 .btn.small { padding: 6px 12px; font-size: 14px; }
+a.btn { display: inline-block; text-decoration: none; }
 .btn.wide { width: 100%; margin-top: 10px; padding: 12px; }
 .btn:disabled { opacity: .55; cursor: default; filter: none; transform: none; }
 

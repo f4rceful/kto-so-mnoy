@@ -12,6 +12,7 @@ export function useAdminData({ paused = false } = {}) {
   const [loadError, setLoadError] = useState('');
   const [data, setData] = useState(null);
   const [updated, setUpdated] = useState(null);
+  const [links, setLinks] = useState({ grafana: '' });
   const [version, setVersion] = useState(0);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -53,6 +54,10 @@ export function useAdminData({ paused = false } = {}) {
   useEffect(() => {
     if (getKey()) refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (phase === 'ready') adminApi.links().then(setLinks, () => {});
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== 'ready') return undefined;
@@ -97,5 +102,5 @@ export function useAdminData({ paused = false } = {}) {
     [toast, toLogin, refresh],
   );
 
-  return { phase, loginError, loadError, data, updated, version, busy, login, logout: () => toLogin(''), expire: toLogin, retry, refresh, perform };
+  return { phase, loginError, loadError, data, updated, links, version, busy, login, logout: () => toLogin(''), expire: toLogin, retry, refresh, perform };
 }
