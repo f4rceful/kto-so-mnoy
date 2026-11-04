@@ -2,6 +2,17 @@ global:
   scrape_interval: 15s
   evaluation_interval: 30s
 
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - dns_sd_configs:
+        - names: ["alertmanager"]
+          type: A
+          port: 9093
+          refresh_interval: 15s
+
 scrape_configs:
   - job_name: kto-so-mnoy
     metrics_path: /metrics
@@ -10,3 +21,26 @@ scrape_configs:
       credentials_file: /tmp/metrics-token
     static_configs:
       - targets: ["app:8000"]
+
+  - job_name: public-health
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    file_sd_configs:
+      - files: ["/tmp/public-targets.json"]
+        refresh_interval: 1m
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  - job_name: containers
+    static_configs:
+      - targets: ["cadvisor:8080"]
