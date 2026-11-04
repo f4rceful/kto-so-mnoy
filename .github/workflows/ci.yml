@@ -53,7 +53,9 @@ jobs:
         run: docker run --rm --entrypoint amtool -v "$PWD/monitoring:/m:ro" prom/alertmanager:v0.34.2 check-config /m/alertmanager.yml
 
       - name: Compose files with every profile
-        run: docker compose --profile monitoring --profile alerts --profile logs config --quiet
+        run: |
+          cp .env.example .env
+          docker compose --profile monitoring --profile alerts --profile logs config --quiet
         env:
           POSTGRES_PASSWORD: ci
 
