@@ -7,7 +7,6 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -17,6 +16,7 @@ from .db import init_db
 from .deps import get_db
 from .max_client import max_client
 from .routers import invitations, profile
+from .static import PrecompressedFiles
 
 WEBAPP_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -122,4 +122,4 @@ def admin_page():
 
 if not WEBAPP_DIR.exists():
     log.warning("Нет %s: соберите фронтенд (cd frontend && npm run build)", WEBAPP_DIR)
-app.mount("/", StaticFiles(directory=WEBAPP_DIR, html=True, check_dir=False), name="webapp")
+app.mount("/", PrecompressedFiles(directory=WEBAPP_DIR, html=True, check_dir=False), name="webapp")
