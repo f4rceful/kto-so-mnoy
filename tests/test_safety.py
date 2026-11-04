@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from helpers import agree, as_user, find_city, new_invitation, register, seed_cities
 
-from app import db, main
+from app import db, main, safety
 from app.config import settings
 from app.routers.invitations import INVITATIONS_PER_HOUR
 from app.safety import REPORTS_PER_DAY
@@ -129,6 +129,7 @@ def test_rate_limit_window_forgets_old_activity(client):
 
 
 def test_admin_requires_key(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(safety, "ADMIN_MAX_FAILURES", 100)
     assert client.get("/api/admin/reports").status_code == 404
     monkeypatch.setattr(settings, "admin_key", "secret-key-123")
     assert client.get("/api/admin/reports").status_code == 401
@@ -197,20 +198,19 @@ def test_ban_user(client, admin):
     assert client.get("/api/me", headers=as_user(2)).status_code == 200
     assert client.post("/api/admin/users/1/unban", headers=admin).status_code == 200
     assert client.get("/api/me", headers=as_user(1)).status_code == 200
-    assert client.get("/api/invitations", headers=as_user(2)).json() == []
-    client.post(f"/api/admin/invitations/{b}/restore", headers=admin)
-    assert [i["id"] for i in client.get("/api/invitations", headers=as_user(2)).json()] == [b]
+    assert [i["id"] for i in client.get("/api/invitations", headers=as_user(2)).json()] == [b, a]
 
 
-def test_admin_overview_endpoints(client, admin):
+def test_admin_overview_endpoints(client, admin, monkeypatch):
+    monkeypatch.setattr(safety, "ADMIN_MAX_FAILURES", 100)
     seed_cities()
     for path in ("/api/admin/stats", "/api/admin/invitations", "/api/admin/users"):
         assert client.get(path).status_code == 401, path
         assert client.get(path, headers={"X-Admin-Key": "bad"}).status_code == 401, path
 
     assert client.get("/api/admin/stats", headers=admin).json() == {"reports": 0, "reported_invitations": 0, "hidden": 0, "banned": 0, "invitations": 0, "users": 0}
-    assert client.get("/api/admin/invitations", headers=admin).json() == {"items": []}
-    assert client.get("/api/admin/users", headers=admin).json() == {"items": []}
+    assert client.get("/api/admin/invitations", headers=admin).json() == {"items": [], "total": 0}
+    assert client.get("/api/admin/users", headers=admin).json() == {"items": [], "total": 0}
 
     kazan = find_city(client, 1, "Казань")
     for uid in (1, 2, 3):
@@ -228,7 +228,7 @@ def test_admin_overview_endpoints(client, admin):
     assert [i["id"] for i in items] == [c, b, a]
     first = next(i for i in items if i["id"] == a)
     assert first["school"] == "Гимназия 7" and first["responses"] == 1 and first["status"] == "open"
-    assert first["author"] == {"id": 1, "name": "Тест 1", "username": None, "banned": False, "invitations": 2}
+    assert first["author"] == {"id": 1, "name": "Тест 1", "username": None, "banned": False, "invitations": 2, "reports": 2}
     assert len(first["reports"]) == 2 and {r["reason"] for r in first["reports"]} == {"Спам или реклама", "Оскорбления или неприемлемое содержание"}
     assert datetime.fromisoformat(first["created_at"]).tzinfo is not None and datetime.fromisoformat(first["reports"][0]["at"]).tzinfo is not None
     assert next(i for i in items if i["id"] == b)["hidden"] is True
@@ -238,9 +238,9 @@ def test_admin_overview_endpoints(client, admin):
     assert client.get("/api/admin/invitations", params={"limit": 501}, headers=admin).status_code == 422
 
     client.post("/api/admin/users/2/ban", headers=admin)
-    banned = client.get("/api/admin/users", headers=admin).json()["items"]
-    assert banned == [{"id": 2, "name": "Тест 2", "username": None, "banned": True, "invitations": 1}]
+    banned = client.get("/api/admin/users", params={"banned": "true"}, headers=admin).json()["items"]
+    assert banned == [{"id": 2, "name": "Тест 2", "username": None, "banned": True, "invitations": 1, "reports": 1, "ban_reason": "Нарушение правил", "ban_until": None}]
     assert client.get("/api/admin/stats", headers=admin).json()["banned"] == 1
     assert [u["id"] for u in client.get("/api/admin/users", params={"banned": "false"}, headers=admin).json()["items"]] == [3, 1]
     client.post("/api/admin/users/2/unban", headers=admin)
-    assert client.get("/api/admin/users", headers=admin).json() == {"items": []}
+    assert client.get("/api/admin/users", params={"banned": "true"}, headers=admin).json() == {"items": [], "total": 0}

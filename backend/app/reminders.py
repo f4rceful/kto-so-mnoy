@@ -5,7 +5,7 @@ from datetime import datetime, time, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import notifications
+from . import bans, notifications
 from .db import City, Invitation, SessionLocal
 
 log = logging.getLogger(__name__)
@@ -66,7 +66,10 @@ def due(db: Session, at: datetime) -> list[tuple[int, bool]]:
 
 async def run_once() -> int:
     with SessionLocal() as db:
+        lifted = bans.expire_due(db, notifications.utcnow())
         pending = due(db, notifications.utcnow())
+    for user_id in lifted:
+        await notifications.tell(user_id, "Срок ограничения доступа к «Кто со мной?» закончился. Можно снова пользоваться сервисом.")
     for inv_id, soon in pending:
         await notifications.remind(inv_id, soon)
     status.update(last_run=notifications.utcnow().timestamp(), sent=status["sent"] + len(pending))

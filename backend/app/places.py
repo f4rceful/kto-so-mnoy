@@ -3,7 +3,7 @@ from collections.abc import Callable
 from fastapi import HTTPException
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .db import City, School, User
 from .names import clean_name, looks_like_name, norm_city, norm_school
@@ -45,6 +45,20 @@ def search_schools(db: Session, city_id: int, query: str, limit: int) -> list[di
     schools = list(db.scalars(q))
     members = school_members(db, [s.id for s in schools])
     return [{"id": s.id, "name": s.name, "custom": s.custom, "members": members.get(s.id, 0)} for s in schools]
+
+
+def find_schools(db: Session, query: str, limit: int) -> list[School]:
+    norm = norm_school(query)
+    if not norm:
+        return []
+    q = (
+        select(School)
+        .where(_word_match(School.name_norm, norm))
+        .options(selectinload(School.city))
+        .order_by(School.custom, School.name)
+        .limit(limit)
+    )
+    return list(db.scalars(q))
 
 
 def school_members(db: Session, school_ids: list[int]) -> dict[int, int]:

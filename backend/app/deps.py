@@ -3,7 +3,7 @@ import re
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from . import terms
+from . import bans, terms
 from .config import settings
 from .db import SessionLocal, User
 from .security import validate_init_data
@@ -41,8 +41,10 @@ def current_user(
 ) -> User:
     uid, name, username = _identity(x_init_data, x_dev_user, x_dev_username)
     user = db.get(User, uid) or User(id=uid)
+    if user.banned and bans.expire_if_due(db, user):
+        db.commit()
     if user.banned:
-        raise HTTPException(403, "Доступ к сервису ограничен за нарушение правил")
+        raise HTTPException(403, bans.denial(db, user))
     user.name = name[:128] or user.name
     user.username = username
     db.add(user)

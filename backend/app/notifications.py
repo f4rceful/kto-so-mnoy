@@ -92,8 +92,8 @@ def already_queued(db: Session, user_id: int, kind: str, ref: int) -> bool:
     )
 
 
-def allowed(db: Session, user: User, kind: str, ref: int | None) -> bool:
-    if user.banned:
+def allowed(db: Session, user: User, kind: str, ref: int | None, banned_ok: bool = False) -> bool:
+    if user.banned and not banned_ok:
         return False
     if kind == "system":
         return True
@@ -187,10 +187,10 @@ async def send_queued(msg_id: int) -> bool:
     return result.ok
 
 
-async def deliver(user_id: int, kind: str, text: str, buttons=None, *, ref: int | None = None, fallback=None) -> bool:
+async def deliver(user_id: int, kind: str, text: str, buttons=None, *, ref: int | None = None, fallback=None, banned_ok: bool = False) -> bool:
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.id == user_id).options(selectinload(User.city)))
-        if user is None or not allowed(db, user, kind, ref):
+        if user is None or not allowed(db, user, kind, ref, banned_ok):
             return False
         msg_id = enqueue(db, user_id, kind, text, buttons, ref, fallback)
     return await send_queued(msg_id)
@@ -262,8 +262,8 @@ def accepted(inv: Invitation) -> int:
     return sum(1 for r in inv.responses if r.status == "accepted")
 
 
-async def tell(user_id: int, text: str) -> None:
-    await deliver(user_id, "system", text)
+async def tell(user_id: int, text: str, banned_ok: bool = False) -> None:
+    await deliver(user_id, "system", text, banned_ok=banned_ok)
 
 
 def new_invitation_recipients(db: Session, inv: Invitation) -> list[int]:

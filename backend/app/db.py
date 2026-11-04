@@ -183,6 +183,28 @@ class Report(Base):
     invitation: Mapped[Invitation] = relationship()
 
 
+class UserBan(Base):
+    __tablename__ = "user_bans"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(200), default="")
+    until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class ModerationLog(Base):
+    __tablename__ = "moderation_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+    action: Mapped[str] = mapped_column(String(16))
+    target_type: Mapped[str] = mapped_column(String(12))
+    target_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    target_label: Mapped[str] = mapped_column(String(160), default="")
+    detail: Mapped[str] = mapped_column(String(300), default="")
+    source: Mapped[str] = mapped_column(String(64), default="")
+
+
 class Block(Base):
     __tablename__ = "blocks"
     __table_args__ = (UniqueConstraint("blocker_id", "blocked_id"),)
