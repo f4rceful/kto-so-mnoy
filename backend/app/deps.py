@@ -3,7 +3,7 @@ import re
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from . import bans, terms
+from . import activity, bans, terms
 from .config import settings
 from .db import SessionLocal, User
 from .security import validate_init_data
@@ -48,6 +48,7 @@ def current_user(
     user.name = name[:128] or user.name
     user.username = username
     db.add(user)
+    activity.record(db, user.id)
     db.commit()
     return user
 

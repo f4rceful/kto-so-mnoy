@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import ssl
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import certifi
 import httpx
 
 from .config import settings
+from .instruments import MAX_API_DURATION, MAX_API_FAILURES, MAX_API_RESPONSES
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +27,22 @@ def ssl_context() -> ssl.SSLContext:
     for pem in CERTS_DIR.glob("*.pem"):
         ctx.load_verify_locations(cafile=str(pem))
     return ctx
+
+
+async def mark_request_start(request: httpx.Request) -> None:
+    request.extensions["kto_started"] = time.perf_counter()
+
+
+async def record_response(response: httpx.Response) -> None:
+    request = response.request
+    call = f"{request.method} {request.url.path}"
+    MAX_API_RESPONSES.labels(call, str(response.status_code)).inc()
+    started = request.extensions.get("kto_started")
+    if started is not None:
+        MAX_API_DURATION.labels(call).observe(time.perf_counter() - started)
+
+
+HOOKS = {"request": [mark_request_start], "response": [record_response]}
 
 
 def message_body(text: str, buttons: list[list[dict]] | None) -> dict:
@@ -47,6 +65,7 @@ class MaxClient:
             headers={"Authorization": settings.bot_token},
             timeout=15,
             verify=ssl_context(),
+            event_hooks=HOOKS,
         )
         self._sleep = sleep
         self._gate = asyncio.Semaphore(CONCURRENCY)
@@ -88,6 +107,7 @@ class MaxClient:
                         "/messages", params={"user_id": user_id}, json=message_body(text, buttons), timeout=httpx.Timeout(10, connect=5)
                     )
             except httpx.TransportError as e:
+                MAX_API_FAILURES.labels("POST /messages").inc()
                 reason = f"сеть: {type(e).__name__}"
             else:
                 code = response.status_code

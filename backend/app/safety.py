@@ -383,6 +383,11 @@ def admin_log(db: Session = Depends(get_db), offset: int = Query(0, ge=0), limit
     }
 
 
+@admin.get("/links", dependencies=[Depends(admin_only)])
+def admin_links():
+    return {"grafana": settings.grafana_url.strip()}
+
+
 @admin.get("/stats", dependencies=[Depends(admin_only)])
 def admin_stats(db: Session = Depends(get_db)):
     scalar = lambda q: db.scalar(q) or 0

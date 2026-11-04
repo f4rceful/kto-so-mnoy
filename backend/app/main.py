@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from . import bot, metrics, notifications, reminders, safety
+from . import alerts, bot, instruments, metrics, notifications, reminders, safety
 from .config import settings
 from .db import init_db
 from .deps import get_db
@@ -73,6 +73,7 @@ app.include_router(safety.router)
 app.include_router(safety.admin)
 app.include_router(bot.router)
 app.include_router(metrics.router)
+app.include_router(alerts.router)
 app.middleware("http")(metrics.track_requests)
 
 
@@ -89,6 +90,7 @@ async def cache_headers(request, call_next):
 
 @app.exception_handler(Exception)
 async def unexpected_error(request, exc: Exception):
+    instruments.UNHANDLED_ERRORS.labels(metrics.route_label(request)).inc()
     log.error("Необработанная ошибка в %s %s", request.method, request.url.path, exc_info=exc)
     return JSONResponse({"detail": "Что-то пошло не так на сервере. Попробуйте ещё раз чуть позже."}, status_code=500)
 

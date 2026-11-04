@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 
 from . import botcmd, notifications, terms
 from .config import settings
+from .instruments import BOT_EVENTS
 from .db import SessionLocal, User
 from .max_client import max_client
 from .routers.invitations import apply_decision
@@ -120,7 +121,9 @@ HANDLERS = {
 
 
 async def handle_update(update: dict) -> None:
-    handler = HANDLERS.get(update.get("update_type"))
+    kind = update.get("update_type")
+    handler = HANDLERS.get(kind)
+    BOT_EVENTS.labels(kind if handler else "other").inc()
     if handler:
         await handler(update)
 
