@@ -138,6 +138,24 @@ def load_in_order(db: Session, ids: list[int]) -> list[Invitation]:
     return [found[i] for i in ids if i in found]
 
 
+def feed_page(db: Session, me: User, interest: str, fmt: str | None, has_spots: bool, sort: str, scope: str, q: str, limit: int, offset: int) -> tuple[list[dict], int]:
+    filters = feed_filters(me, blocked_pair_ids(db, me.id), interest, fmt, scope)
+    needle = " ".join(q.lower().split())
+    if needle:
+        filters.append(title_filter(db, filters, needle))
+    stmt = select(Invitation.id).where(*filters)
+    taken = None
+    if has_spots or sort == "spots":
+        counts = accepted_counts()
+        stmt = stmt.outerjoin(counts, counts.c.invitation_id == Invitation.id)
+        taken = func.coalesce(counts.c.taken, 0)
+        if has_spots:
+            stmt = stmt.where(taken < Invitation.max_participants)
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    ids = list(db.scalars(stmt.order_by(*feed_order(sort, taken)).limit(limit).offset(offset)))
+    return [inv_out(i, me, brief=True) for i in load_in_order(db, ids)], total
+
+
 @router.get("/api/invitations")
 def feed(
     interest: str = "",
@@ -152,22 +170,10 @@ def feed(
     db: Session = Depends(get_db),
     me: User = Depends(current_user),
 ):
-    filters = feed_filters(me, blocked_pair_ids(db, me.id), interest, fmt, scope)
-    needle = " ".join(q.lower().split())
-    if needle:
-        filters.append(title_filter(db, filters, needle))
-    stmt = select(Invitation.id).where(*filters)
-    taken = None
-    if has_spots or sort == "spots":
-        counts = accepted_counts()
-        stmt = stmt.outerjoin(counts, counts.c.invitation_id == Invitation.id)
-        taken = func.coalesce(counts.c.taken, 0)
-        if has_spots:
-            stmt = stmt.where(taken < Invitation.max_participants)
+    items, total = feed_page(db, me, interest, fmt, has_spots, sort, scope, q, limit, offset)
     if response is not None:
-        response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
-    ids = list(db.scalars(stmt.order_by(*feed_order(sort, taken)).limit(limit).offset(offset)))
-    return [inv_out(i, me, brief=True) for i in load_in_order(db, ids)]
+        response.headers["X-Total-Count"] = str(total)
+    return items
 
 
 @router.get("/api/invitations/mine")

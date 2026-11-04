@@ -22,9 +22,12 @@ export function useLoad(fetcher, deps) {
   return { ...state, reload };
 }
 
-export function usePages(fetchPage, deps) {
+const SEED_TTL = 15000;
+
+export function usePages(fetchPage, deps, seed = null) {
   const [state, setState] = useState({ items: [], total: 0, loading: true, loadingMore: false, error: null, moreError: null });
   const [tick, setTick] = useState(0);
+  const seedRef = useRef(seed && Date.now() - seed.at < SEED_TTL ? seed : null);
   const run = useRef(0);
   const busy = useRef(false);
   const latest = useRef({ fetchPage, state });
@@ -33,6 +36,12 @@ export function usePages(fetchPage, deps) {
   useEffect(() => {
     const id = ++run.current;
     busy.current = false;
+    const initial = seedRef.current;
+    seedRef.current = null;
+    if (initial) {
+      setState({ items: initial.items, total: initial.total, loading: false, loadingMore: false, error: null, moreError: null });
+      return;
+    }
     setState({ items: [], total: 0, loading: true, loadingMore: false, error: null, moreError: null });
     latest.current.fetchPage(0).then(
       ({ items, total }) => run.current === id && setState((s) => ({ ...s, items, total, loading: false })),
