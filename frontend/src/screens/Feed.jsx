@@ -16,7 +16,7 @@ const SCOPES = [
 
 const activeFilters = (f) => (f.fmt ? 1 : 0) + (f.hasSpots ? 1 : 0);
 
-export default function Feed({ interests, refreshKey, onOpen }) {
+export default function Feed({ interests, refreshKey, onOpen, seed }) {
   const [filter, setFilter] = useState(NO_FILTER);
   const [sort, setSort] = useState('new');
   const [scope, setScope] = useState('school');
@@ -37,6 +37,7 @@ export default function Feed({ interests, refreshKey, onOpen }) {
   const { items, total, loading, loadingMore, error, moreError, hasMore, loadMore, reload, sentinel } = usePages(
     (offset) => api.feed({ ...filter, sort, scope, q: search, offset }),
     [filter, sort, scope, search, refreshKey],
+    seed,
   );
 
   const openFilter = () => {

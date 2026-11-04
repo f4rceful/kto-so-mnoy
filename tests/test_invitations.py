@@ -234,7 +234,7 @@ def test_invitation_share_link(client, monkeypatch):
     monkeypatch.setattr(settings, "bot_username", "kto_bot")
     url = f"/api/invitations/{inv['id']}"
     assert client.get(url, headers=as_user(2)).json()["link"] == f"https://max.ru/kto_bot?startapp=inv_{inv['id']}"
-    assert all(i["link"].endswith(f"inv_{i['id']}") for i in client.get("/api/invitations", headers=as_user(2)).json())
+    assert all("link" not in i for i in client.get("/api/invitations", headers=as_user(2)).json())
 
 
 def test_author_edits_invitation(client):

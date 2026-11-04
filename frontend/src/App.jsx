@@ -1,17 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Typography } from '@maxhub/max-ui';
 import { api, bridge, startInvitationId } from './api';
 import { useBackButton } from './hooks';
 import { BackButton, BottomNav, Loading, ScrollTopButton } from './components';
 import { pendingCount } from './InvitationCard';
 import { readSessionJSON, writeSessionJSON } from './storage';
-import Detail from './screens/Detail';
-import EditInvitation from './screens/EditInvitation';
 import Feed from './screens/Feed';
-import NewInvitation from './screens/NewInvitation';
-import Profile from './screens/Profile';
-import Registration from './screens/Registration';
-import Settings from './screens/Settings';
+
+const loaders = {
+  detail: () => import('./screens/Detail'),
+  profile: () => import('./screens/Profile'),
+  newInvitation: () => import('./screens/NewInvitation'),
+  editInvitation: () => import('./screens/EditInvitation'),
+  settings: () => import('./screens/Settings'),
+  registration: () => import('./screens/Registration'),
+};
+const Detail = lazy(loaders.detail);
+const Profile = lazy(loaders.profile);
+const NewInvitation = lazy(loaders.newInvitation);
+const EditInvitation = lazy(loaders.editInvitation);
+const Settings = lazy(loaders.settings);
+const Registration = lazy(loaders.registration);
+
+const PRELOAD_DELAY = 800;
+const preloadScreens = () => [loaders.detail, loaders.profile, loaders.newInvitation].forEach((load) => load());
 
 const NAV_KEY = 'kto-so-mnoy:nav';
 const TABS = ['feed', 'profile'];
@@ -41,13 +53,16 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deepLink, setDeepLink] = useState(launch.deepLink);
   const [waiting, setWaiting] = useState(0);
+  const [seed, setSeed] = useState(null);
 
   const load = useCallback(() => {
     setBoot({ loading: true, error: null });
-    Promise.all([api.interests(), api.me()]).then(
-      ([list, profile]) => {
+    api.bootstrap().then(
+      ({ me: profile, interests: list, feed, waiting: count }) => {
         setInterests(list);
         setMe(profile);
+        setWaiting(count);
+        setSeed(feed ? { ...feed, at: Date.now() } : null);
         setBoot({ loading: false, error: null });
       },
       (error) => setBoot({ loading: false, error }),
@@ -60,7 +75,7 @@ export default function App() {
   }, [launch.deep, tab, stack]);
 
   useEffect(() => {
-    if (!me?.onboarded) return undefined;
+    if (!me?.onboarded || refreshKey === 0) return undefined;
     let cancelled = false;
     api.mine().then(
       (list) => {
@@ -74,6 +89,12 @@ export default function App() {
       cancelled = true;
     };
   }, [me?.onboarded, refreshKey]);
+
+  useEffect(() => {
+    if (!me?.onboarded) return undefined;
+    const timer = setTimeout(preloadScreens, PRELOAD_DELAY);
+    return () => clearTimeout(timer);
+  }, [me?.onboarded]);
 
   useEffect(() => {
     if (me?.onboarded && deepLink) {
@@ -104,7 +125,11 @@ export default function App() {
   }
 
   if (!me.onboarded) {
-    return <Registration me={me} interests={interests} onSaved={setMe} />;
+    return (
+      <Suspense fallback={<Loading />}>
+        <Registration me={me} interests={interests} onSaved={setMe} />
+      </Suspense>
+    );
   }
 
   const top = stack.at(-1);
@@ -159,7 +184,7 @@ export default function App() {
             <BackButton onClick={back} />
           </div>
         )}
-        {screen}
+        <Suspense fallback={<Loading />}>{screen}</Suspense>
       </>
     );
   }
@@ -168,15 +193,17 @@ export default function App() {
   const toTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   return (
     <>
-      {tab === 'feed' && <Feed interests={interests} refreshKey={refreshKey} onOpen={openDetail} />}
+      {tab === 'feed' && <Feed interests={interests} refreshKey={refreshKey} onOpen={openDetail} seed={seed} />}
       {tab === 'profile' && (
-        <Profile
-          me={me}
-          interests={interests}
-          refreshKey={refreshKey}
-          onOpen={openDetail}
-          onSettings={() => push({ name: 'settings' })}
-        />
+        <Suspense fallback={<Loading />}>
+          <Profile
+            me={me}
+            interests={interests}
+            refreshKey={refreshKey}
+            onOpen={openDetail}
+            onSettings={() => push({ name: 'settings' })}
+          />
+        </Suspense>
       )}
       <ScrollTopButton onClick={toTop} />
       <BottomNav
