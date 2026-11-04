@@ -1,6 +1,6 @@
 export default function StatsBar({ stats: s }) {
   const tiles = [
-    [s.reports, 'жалоб ждут решения', s.reports ? 'attn' : ''],
+    [s.reported_invitations, 'приглашений с жалобами', s.reported_invitations ? 'attn' : ''],
     [s.hidden, 'скрыто', s.hidden ? 'warn' : ''],
     [s.banned, 'заблокировано', ''],
     [s.invitations, 'приглашений', ''],

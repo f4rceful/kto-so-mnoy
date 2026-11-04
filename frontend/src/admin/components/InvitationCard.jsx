@@ -40,7 +40,7 @@ function ReportList({ reports }) {
   );
 }
 
-export default function InvitationCard({ item: inv, actions, ask }) {
+export default function InvitationCard({ item: inv, actions, ask, busy }) {
   const author = inv.author;
   const reported = inv.reports.length > 0;
   const classes = ['card', reported && !inv.hidden && 'reported', inv.hidden && 'hid'].filter(Boolean).join(' ');
@@ -67,6 +67,7 @@ export default function InvitationCard({ item: inv, actions, ask }) {
         </span>
         {author.banned && <span className="tag red">автор заблокирован</span>}
         <span>его приглашений: {author.invitations}</span>
+        {author.reports > 0 && <span>жалоб на автора: {author.reports}</span>}
         {inv.school && <span>Школа: {inv.school}</span>}
         <span>Создано: {fmtDate(inv.created_at)}</span>
         <span>Откликов: {inv.responses}</span>
@@ -78,17 +79,19 @@ export default function InvitationCard({ item: inv, actions, ask }) {
 
       <div className="actions">
         {inv.hidden ? (
-          <button type="button" className="btn ok" onClick={() => actions.restore(inv)}>Вернуть в ленту</button>
+          <button type="button" className="btn ok" disabled={busy} onClick={() => actions.restore(inv)}>Вернуть в ленту</button>
         ) : (
-          <button type="button" className="btn danger" onClick={() => ask.hide(inv)}>Скрыть</button>
+          <button type="button" className="btn danger" disabled={busy} onClick={() => ask.hide(inv)}>Скрыть</button>
         )}
+        <button type="button" className="btn ghost" onClick={() => ask.edit(inv)}>Изменить</button>
         {reported && (
-          <button type="button" className="btn ghost" onClick={() => actions.dismiss(inv)}>Жалобы необоснованны</button>
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => actions.dismiss(inv)}>Жалобы необоснованны</button>
         )}
+        <button type="button" className="btn ghost" onClick={() => ask.profile(author)}>Профиль автора</button>
         {author.banned ? (
-          <button type="button" className="btn ghost" onClick={() => actions.unban(author.id)}>Разблокировать автора</button>
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => actions.unban(author.id)}>Разблокировать автора</button>
         ) : (
-          <button type="button" className="btn ghost" onClick={() => ask.ban(author)}>Заблокировать автора</button>
+          <button type="button" className="btn ghost" disabled={busy} onClick={() => ask.ban(author)}>Заблокировать автора</button>
         )}
       </div>
     </article>

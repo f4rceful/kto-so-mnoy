@@ -9,8 +9,12 @@ export function useAdminData({ paused = false } = {}) {
   const toast = useToast();
   const [phase, setPhase] = useState(() => (getKey() ? 'loading' : 'login'));
   const [loginError, setLoginError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [data, setData] = useState(null);
   const [updated, setUpdated] = useState(null);
+  const [version, setVersion] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   const hasData = useRef(false);
@@ -26,16 +30,18 @@ export function useAdminData({ paused = false } = {}) {
   const refresh = useCallback(
     async (silent = false) => {
       try {
-        const [stats, reports, all, users] = await Promise.all([adminApi.stats(), adminApi.reports(), adminApi.invitations(), adminApi.users()]);
+        const [stats, reports] = await Promise.all([adminApi.stats(), adminApi.reports()]);
         hasData.current = true;
-        setData({ stats, reports: reports.items, all: all.items, users: users.items });
+        setData({ stats, reports: reports.items });
         setUpdated(new Date());
+        if (!silent) setVersion((v) => v + 1);
         setPhase('ready');
       } catch (e) {
         if (e instanceof AuthError) {
           toLogin(e.message);
         } else if (!hasData.current) {
-          toLogin(e.message);
+          setLoadError(e.message);
+          setPhase('error');
         } else if (!silent) {
           toast(e.message, 'bad');
         }
@@ -66,19 +72,30 @@ export function useAdminData({ paused = false } = {}) {
     [refresh],
   );
 
+  const retry = useCallback(() => {
+    setPhase('loading');
+    refresh();
+  }, [refresh]);
+
   const perform = useCallback(
     async (label, action) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setBusy(true);
       try {
-        await action();
-        toast(label);
+        const result = await action();
+        toast(typeof label === 'function' ? label(result) : label);
         await refresh();
       } catch (e) {
         if (e instanceof AuthError) toLogin(e.message);
         else toast(e.message, 'bad');
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
       }
     },
     [toast, toLogin, refresh],
   );
 
-  return { phase, loginError, data, updated, login, logout: () => toLogin(''), refresh, perform };
+  return { phase, loginError, loadError, data, updated, version, busy, login, logout: () => toLogin(''), expire: toLogin, retry, refresh, perform };
 }
