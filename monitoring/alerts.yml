@@ -1,0 +1,150 @@
+groups:
+  - name: service
+    rules:
+      - alert: AppDown
+        expr: up{job="kto-so-mnoy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Сервис не отвечает
+          description: Не удаётся получить метрики приложения уже минуту.
+
+      - alert: DatabaseDown
+        expr: kto_db_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: База данных не отвечает
+          description: Приложение не может выполнить запрос к базе уже минуту.
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(kto_http_requests_total{status=~"5.."}[5m])) / sum(rate(kto_http_requests_total[5m])) > 0.05
+          and sum(rate(kto_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Много ошибок сервера
+          description: Больше 5% запросов заканчиваются ошибкой 5xx.
+
+      - alert: UnhandledErrors
+        expr: sum(increase(kto_unhandled_errors_total[10m])) > 3
+        labels:
+          severity: warning
+        annotations:
+          summary: Необработанные ошибки в коде
+          description: За 10 минут больше трёх необработанных исключений. Подробности в журнале сервиса.
+
+      - alert: SlowResponses
+        expr: histogram_quantile(0.95, sum by (le) (rate(kto_http_request_duration_seconds_bucket[10m]))) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Сервис отвечает медленно
+          description: 95% запросов обрабатываются дольше секунды.
+
+      - alert: ServiceRestarted
+        expr: changes(kto_start_time_seconds[10m]) > 0
+        labels:
+          severity: info
+        annotations:
+          summary: Сервис перезапущен
+          description: Приложение запустилось заново за последние 10 минут.
+
+  - name: bot
+    rules:
+      - alert: BotNotHealthy
+        expr: kto_bot_state{state=~"down|stale"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Бот не получает события
+          description: Бот не работает или давно не получал обновления от MAX.
+
+      - alert: BotPollingFailing
+        expr: kto_bot_failures >= 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Бот подряд не может получить события
+          description: Пять и больше сбоев подряд при обращении к MAX.
+
+      - alert: NotificationBacklog
+        expr: kto_notification_outbox > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Очередь сообщений растёт
+          description: В очереди больше 100 сообщений уже 10 минут.
+
+      - alert: NotificationsStuck
+        expr: kto_notification_outbox_oldest_age_seconds > 900
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Сообщение долго ждёт отправки
+          description: Самое старое сообщение в очереди ждёт больше 15 минут.
+
+      - alert: NotificationFailures
+        expr: increase(kto_notifications_total{result="failed"}[15m]) > 10
+        labels:
+          severity: warning
+        annotations:
+          summary: Сообщения не доставляются
+          description: Больше десяти недоставленных сообщений за 15 минут.
+
+      - alert: MaxApiErrors
+        expr: sum(increase(kto_max_api_responses_total{status=~"5..", call!="GET /updates"}[10m])) > 5
+        labels:
+          severity: warning
+        annotations:
+          summary: API MAX отвечает ошибками
+          description: Больше пяти ответов 5xx от MAX за 10 минут.
+
+  - name: moderation
+    rules:
+      - alert: ReportsWaiting
+        expr: kto_reports_open > 0
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: Жалобы ждут решения
+          description: Есть жалобы без решения модератора больше двух часов.
+
+  - name: availability
+    rules:
+      - alert: PublicUrlDown
+        expr: probe_success{job="public-health"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Публичный адрес недоступен
+          description: Проверка снаружи не проходит. Мини-приложение и webhook бота могут не работать.
+
+      - alert: CertificateExpiring
+        expr: (probe_ssl_earliest_cert_expiry{job="public-health"} - time()) / 86400 < 7
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: Сертификат скоро закончится
+          description: HTTPS-сертификат публичного адреса истекает меньше чем через 7 дней.
+
+      - alert: PostgresExporterDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Нет метрик базы данных
+          description: Экспортёр не может подключиться к PostgreSQL.

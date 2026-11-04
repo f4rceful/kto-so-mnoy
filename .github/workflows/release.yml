@@ -40,6 +40,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: APP_VERSION=${{ github.ref_name }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
@@ -51,6 +52,7 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
+          build-args: APP_VERSION=${{ github.ref_name }}
           tags: kto-so-mnoy:${{ github.ref_name }}
           cache-from: type=gha
 

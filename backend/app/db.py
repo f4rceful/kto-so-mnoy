@@ -183,6 +183,13 @@ class Report(Base):
     invitation: Mapped[Invitation] = relationship()
 
 
+class UserActivity(Base):
+    __tablename__ = "user_activity"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True, index=True)
+
+
 class UserBan(Base):
     __tablename__ = "user_bans"
 

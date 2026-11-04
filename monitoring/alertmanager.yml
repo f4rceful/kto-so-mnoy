@@ -1,0 +1,16 @@
+route:
+  receiver: moderators
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: moderators
+    webhook_configs:
+      - url: http://app:8000/api/alerts/webhook
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /tmp/alert-token

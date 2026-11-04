@@ -60,7 +60,7 @@ function Panel() {
 
   return (
     <>
-      <TopBar updated={admin.updated} onRefresh={() => admin.refresh()} onLogout={admin.logout} />
+      <TopBar updated={admin.updated} grafana={admin.links.grafana} onRefresh={() => admin.refresh()} onLogout={admin.logout} />
 
       <main>
         <StatsBar stats={data.stats} />

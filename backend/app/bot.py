@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 
 from . import botcmd, notifications, terms
 from .config import settings
+from .instruments import BOT_EVENTS
 from .db import SessionLocal, User
 from .max_client import max_client
 from .routers.invitations import apply_decision
@@ -21,6 +22,7 @@ RETRY_BASE, RETRY_MAX = 5, 60
 WEBHOOK_PATH = "/api/bot/webhook"
 
 status = {"enabled": False, "mode": "polling", "last_ok": None, "failures": 0, "last_error": ""}
+BOT_STALE_AFTER = 120
 
 router = APIRouter()
 
@@ -119,7 +121,9 @@ HANDLERS = {
 
 
 async def handle_update(update: dict) -> None:
-    handler = HANDLERS.get(update.get("update_type"))
+    kind = update.get("update_type")
+    handler = HANDLERS.get(kind)
+    BOT_EVENTS.labels(kind if handler else "other").inc()
     if handler:
         await handler(update)
 
@@ -198,3 +202,14 @@ async def webhook(request: Request, background: BackgroundTasks, x_max_bot_api_s
     status["last_ok"] = time.time()
     background.add_task(handle_updates, [update])
     return {"ok": True}
+
+
+def health_state() -> str:
+    if not settings.bot_token:
+        return "off"
+    if not status["enabled"]:
+        return "down"
+    if status.get("mode") == "webhook":
+        return "ok"
+    last = status["last_ok"]
+    return "ok" if last and time.time() - last < BOT_STALE_AFTER else "stale"

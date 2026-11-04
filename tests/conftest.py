@@ -7,6 +7,7 @@ os.environ["DEV_MODE"] = "true"
 os.environ["BOT_TOKEN"] = ""
 os.environ["BOT_USERNAME"] = ""
 os.environ["ADMIN_KEY"] = ""
+os.environ["METRICS_TOKEN"] = ""
 os.environ["BOT_QUICK_ACTIONS"] = "false"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
@@ -15,7 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
-from app import citylist, db, notifications, safety
+from app import activity, citylist, db, notifications, safety
 from app.config import settings
 from app.main import app
 from app.max_client import SendResult, max_client
@@ -70,6 +71,7 @@ class SentButtons:
 @pytest.fixture(autouse=True)
 def reset_admin_lock():
     safety.failures.clear()
+    activity.seen.clear()
 
 
 @pytest.fixture()
