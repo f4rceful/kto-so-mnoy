@@ -7,6 +7,7 @@ os.environ["DEV_MODE"] = "true"
 os.environ["BOT_TOKEN"] = ""
 os.environ["BOT_USERNAME"] = ""
 os.environ["ADMIN_KEY"] = ""
+os.environ["METRICS_TOKEN"] = ""
 os.environ["BOT_QUICK_ACTIONS"] = "false"
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 

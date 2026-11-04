@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     bot_quick_actions: bool = False
     public_url: str = ""
     webhook_secret: str = ""
+    metrics_token: str = ""
 
 
 settings = Settings()

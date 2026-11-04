@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from . import bot, notifications, reminders, safety
+from . import bot, metrics, notifications, reminders, safety
 from .config import settings
 from .db import init_db
 from .deps import get_db
@@ -19,7 +19,6 @@ from .max_client import max_client
 from .routers import invitations, profile
 
 WEBAPP_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
-BOT_STALE_AFTER = 120
 
 log = logging.getLogger(__name__)
 
@@ -73,6 +72,8 @@ app.include_router(invitations.router)
 app.include_router(safety.router)
 app.include_router(safety.admin)
 app.include_router(bot.router)
+app.include_router(metrics.router)
+app.middleware("http")(metrics.track_requests)
 
 
 @app.middleware("http")
@@ -92,17 +93,6 @@ async def unexpected_error(request, exc: Exception):
     return JSONResponse({"detail": "Что-то пошло не так на сервере. Попробуйте ещё раз чуть позже."}, status_code=500)
 
 
-def bot_state() -> str:
-    if not settings.bot_token:
-        return "off"
-    if not bot.status["enabled"]:
-        return "down"
-    if bot.status.get("mode") == "webhook":
-        return "ok"
-    last = bot.status["last_ok"]
-    return "ok" if last and time.time() - last < BOT_STALE_AFTER else "stale"
-
-
 @app.get("/api/health")
 def health(db: Session = Depends(get_db)):
     try:
@@ -110,7 +100,7 @@ def health(db: Session = Depends(get_db)):
     except Exception:
         log.exception("Проверка состояния: база недоступна")
         return JSONResponse({"status": "down", "db": "error"}, status_code=503)
-    bot_health = bot_state()
+    bot_health = bot.health_state()
     return {
         "status": "ok" if bot_health in ("ok", "off") else "degraded",
         "db": "ok",

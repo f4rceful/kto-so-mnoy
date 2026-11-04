@@ -21,6 +21,7 @@ RETRY_BASE, RETRY_MAX = 5, 60
 WEBHOOK_PATH = "/api/bot/webhook"
 
 status = {"enabled": False, "mode": "polling", "last_ok": None, "failures": 0, "last_error": ""}
+BOT_STALE_AFTER = 120
 
 router = APIRouter()
 
@@ -198,3 +199,14 @@ async def webhook(request: Request, background: BackgroundTasks, x_max_bot_api_s
     status["last_ok"] = time.time()
     background.add_task(handle_updates, [update])
     return {"ok": True}
+
+
+def health_state() -> str:
+    if not settings.bot_token:
+        return "off"
+    if not status["enabled"]:
+        return "down"
+    if status.get("mode") == "webhook":
+        return "ok"
+    last = status["last_ok"]
+    return "ok" if last and time.time() - last < BOT_STALE_AFTER else "stale"
