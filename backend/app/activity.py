@@ -14,15 +14,17 @@ def today() -> date:
     return (datetime.now(timezone.utc) + LOCAL_OFFSET).date()
 
 
-def record(db: Session, user_id: int) -> None:
+def record(db: Session, user_id: int) -> bool:
     key = (user_id, today())
     if key in seen:
-        return
+        return False
     if any(day != key[1] for _, day in seen):
         seen.clear()
+    added = True
     try:
         with db.begin_nested():
             db.add(UserActivity(user_id=user_id, day=key[1]))
     except IntegrityError:
-        pass
+        added = False
     seen.add(key)
+    return added

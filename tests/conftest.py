@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
-from app import activity, citylist, db, notifications, safety
+from app import activity, citylist, db, metrics, notifications, safety
 from app.config import settings
 from app.main import app
 from app.max_client import SendResult, max_client
@@ -69,9 +69,10 @@ class SentButtons:
 
 
 @pytest.fixture(autouse=True)
-def reset_admin_lock():
+def reset_admin_lock(monkeypatch):
     safety.failures.clear()
     activity.seen.clear()
+    monkeypatch.setattr(metrics, "CACHE_SECONDS", 0)
 
 
 @pytest.fixture()

@@ -40,16 +40,19 @@ def current_user(
     x_dev_username: str = Header(default=""),
 ) -> User:
     uid, name, username = _identity(x_init_data, x_dev_user, x_dev_username)
-    user = db.get(User, uid) or User(id=uid)
+    existing = db.get(User, uid)
+    user = existing or User(id=uid)
     if user.banned and bans.expire_if_due(db, user):
         db.commit()
     if user.banned:
         raise HTTPException(403, bans.denial(db, user))
-    user.name = name[:128] or user.name
-    user.username = username
-    db.add(user)
-    activity.record(db, user.id)
-    db.commit()
+    new_name = name[:128] or user.name
+    changed = existing is None or user.name != new_name or user.username != username
+    user.name, user.username = new_name, username
+    if changed:
+        db.add(user)
+    if activity.record(db, user.id) or changed:
+        db.commit()
     return user
 
 
