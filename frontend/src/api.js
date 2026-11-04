@@ -63,7 +63,7 @@ async function request(path, method = 'GET', body, withHeaders = false) {
 const FEED_PAGE = 20;
 
 export const api = {
-  interests: () => request('/interests'),
+  bootstrap: () => request('/bootstrap'),
   regions: () => request('/regions'),
   cities: (region, q) => request(`/cities?${new URLSearchParams({ region, q })}`),
   schools: (cityId, q) => request(`/schools?${new URLSearchParams({ city_id: cityId, q })}`),

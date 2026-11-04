@@ -53,13 +53,16 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deepLink, setDeepLink] = useState(launch.deepLink);
   const [waiting, setWaiting] = useState(0);
+  const [seed, setSeed] = useState(null);
 
   const load = useCallback(() => {
     setBoot({ loading: true, error: null });
-    Promise.all([api.interests(), api.me()]).then(
-      ([list, profile]) => {
+    api.bootstrap().then(
+      ({ me: profile, interests: list, feed, waiting: count }) => {
         setInterests(list);
         setMe(profile);
+        setWaiting(count);
+        setSeed(feed ? { ...feed, at: Date.now() } : null);
         setBoot({ loading: false, error: null });
       },
       (error) => setBoot({ loading: false, error }),
@@ -72,7 +75,7 @@ export default function App() {
   }, [launch.deep, tab, stack]);
 
   useEffect(() => {
-    if (!me?.onboarded) return undefined;
+    if (!me?.onboarded || refreshKey === 0) return undefined;
     let cancelled = false;
     api.mine().then(
       (list) => {
@@ -190,7 +193,7 @@ export default function App() {
   const toTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
   return (
     <>
-      {tab === 'feed' && <Feed interests={interests} refreshKey={refreshKey} onOpen={openDetail} />}
+      {tab === 'feed' && <Feed interests={interests} refreshKey={refreshKey} onOpen={openDetail} seed={seed} />}
       {tab === 'profile' && (
         <Suspense fallback={<Loading />}>
           <Profile

@@ -15,7 +15,7 @@ from .config import settings
 from .db import init_db
 from .deps import get_db
 from .max_client import max_client
-from .routers import invitations, profile
+from .routers import bootstrap, invitations, profile
 from .static import PrecompressedFiles
 
 WEBAPP_DIR = Path(__file__).resolve().parents[2] / "frontend" / "dist"
@@ -69,6 +69,7 @@ class GZipUnlessRange(GZipMiddleware):
 app.add_middleware(GZipUnlessRange, minimum_size=500)
 app.include_router(profile.router)
 app.include_router(invitations.router)
+app.include_router(bootstrap.router)
 app.include_router(safety.router)
 app.include_router(safety.admin)
 app.include_router(bot.router)
