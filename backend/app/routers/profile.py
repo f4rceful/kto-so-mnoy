@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from .. import places, terms
 from ..db import School, User, now
+from ..httpcache import cached_json
 from ..deps import current_user, get_db
 from ..interests import INTERESTS, interests_out
 from ..regions import GRADES, REGIONS
@@ -28,14 +29,17 @@ class ProfileIn(BaseModel):
     accept_terms: bool | None = None
 
 
+STATIC_MAX_AGE = 3600
+
+
 @router.get("/api/interests")
-def interests():
-    return interests_out()
+def interests(request: Request):
+    return cached_json(request, interests_out(), STATIC_MAX_AGE)
 
 
 @router.get("/api/regions")
-def regions():
-    return REGIONS
+def regions(request: Request):
+    return cached_json(request, REGIONS, STATIC_MAX_AGE)
 
 
 @router.get("/api/cities")
@@ -76,8 +80,8 @@ def school(school_id: int, db: Session = Depends(get_db), _: User = Depends(curr
 
 
 @router.get("/api/terms")
-def get_terms():
-    return {"version": terms.TERMS_VERSION, "documents": terms.DOCUMENTS}
+def get_terms(request: Request):
+    return cached_json(request, {"version": terms.TERMS_VERSION, "documents": terms.DOCUMENTS})
 
 
 @router.get("/api/me")

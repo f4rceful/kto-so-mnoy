@@ -179,6 +179,39 @@
           "queryType": "range"
         }
       ]
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "Медленные запросы к базе (дольше 250 мс)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 10
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{service=\"db\"} |= \"duration:\"",
+          "refId": "A",
+          "queryType": "range"
+        }
+      ]
     }
   ]
 }

@@ -17,6 +17,7 @@ BOT_STATES = ("ok", "stale", "down", "off")
 ACTIVE_PERIODS = (("1d", 1), ("7d", 7), ("30d", 30))
 FIRST_RESPONSE_BOUNDS = (300, 900, 3600, 10800, 43200, 86400, 259200)
 STARTED_AT = time.time()
+CACHE_SECONDS = 30
 
 router = APIRouter()
 
@@ -185,14 +186,26 @@ def process_metrics() -> list:
 
 
 class AppCollector:
+    def __init__(self) -> None:
+        self.cached_at = 0.0
+        self.cached: list = []
+
+    def database_families(self) -> list:
+        with SessionLocal() as db:
+            db.execute(select(1))
+            if self.cached and time.monotonic() - self.cached_at < CACHE_SECONDS:
+                return self.cached
+            families = database_metrics(db)
+        self.cached, self.cached_at = families, time.monotonic()
+        return families
+
     def collect(self):
-        db_up = gauge("kto_db_up", "База данных отвечает", 0)
         try:
-            with SessionLocal() as db:
-                families = database_metrics(db)
+            families = self.database_families()
             db_up = gauge("kto_db_up", "База данных отвечает", 1)
         except Exception:
             families = []
+            db_up = gauge("kto_db_up", "База данных отвечает", 0)
         yield db_up
         yield from families
         yield from process_metrics()

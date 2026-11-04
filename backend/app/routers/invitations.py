@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi import Response as HttpResponse
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from .. import ics, notifications
@@ -77,39 +77,65 @@ def load_invitation(db: Session, inv_id: int) -> Invitation:
     return inv
 
 
-def feed_query(me: User, hidden_authors: set[int], interest: str, fmt: str | None, scope: str, sort: str):
-    query = (
-        select(Invitation)
-        .where(Invitation.status == "open", Invitation.hidden.is_(False))
-        .options(selectinload(Invitation.responses), selectinload(Invitation.author), selectinload(Invitation.school))
-    )
+def feed_filters(me: User, hidden_authors: set[int], interest: str, fmt: str | None, scope: str) -> list:
+    filters = [Invitation.status == "open", Invitation.hidden.is_(False)]
     if hidden_authors:
-        query = query.where(Invitation.author_id.not_in(hidden_authors))
+        filters.append(Invitation.author_id.not_in(hidden_authors))
     if scope == "school" and me.school_id:
-        query = query.where(Invitation.school_id == me.school_id)
+        filters.append(Invitation.school_id == me.school_id)
     elif me.city_id:
-        query = query.where(Invitation.city_id == me.city_id)
+        filters.append(Invitation.city_id == me.city_id)
     ids = [i for i in interest.split(",") if i]
     if ids:
-        query = query.where(Invitation.interest.in_(ids))
+        filters.append(Invitation.interest.in_(ids))
     if fmt:
-        query = query.where(Invitation.fmt == fmt)
+        filters.append(Invitation.fmt == fmt)
+    return filters
+
+
+def title_filter(db: Session, filters: list, needle: str):
+    if db.get_bind().dialect.name == "sqlite":
+        rows = db.execute(select(Invitation.id, Invitation.title).where(*filters)).all()
+        return Invitation.id.in_([i for i, title in rows if needle in title.lower()])
+    return func.lower(Invitation.title).contains(needle, autoescape=True)
+
+
+def accepted_counts():
+    return (
+        select(Response.invitation_id.label("invitation_id"), func.count().label("taken"))
+        .where(Response.status == "accepted")
+        .group_by(Response.invitation_id)
+        .subquery()
+    )
+
+
+def date_order(since: date) -> list:
+    upcoming = Invitation.when_date >= since
+    return [
+        case((Invitation.when_date.is_(None), 1), (upcoming, 0), else_=2),
+        case((upcoming, Invitation.when_date), else_=None).asc().nulls_last(),
+        case((upcoming, Invitation.when_time), else_=None).asc().nulls_last(),
+        case((Invitation.when_date < since, Invitation.when_date), else_=None).desc().nulls_last(),
+    ]
+
+
+def feed_order(sort: str, taken) -> list:
     if sort == "old":
-        return query.order_by(Invitation.created_at.asc(), Invitation.id.asc())
-    return query.order_by(Invitation.created_at.desc(), Invitation.id.desc())
+        return [Invitation.created_at.asc(), Invitation.id.asc()]
+    newest = [Invitation.created_at.desc(), Invitation.id.desc()]
+    if sort == "spots":
+        return [(Invitation.max_participants - taken).desc(), *newest]
+    if sort == "soon":
+        return [*date_order(date.today() - timedelta(days=1)), *newest]
+    return newest
 
 
-def sort_by_date(items: list[Invitation]) -> None:
-    since = date.today() - timedelta(days=1)
-
-    def key(i: Invitation):
-        if i.when_date is None:
-            return (1, 0, "")
-        if i.when_date < since:
-            return (2, -i.when_date.toordinal(), "")
-        return (0, i.when_date.toordinal(), i.when_time)
-
-    items.sort(key=key)
+def load_in_order(db: Session, ids: list[int]) -> list[Invitation]:
+    if not ids:
+        return []
+    q = select(Invitation).where(Invitation.id.in_(ids)).options(selectinload(Invitation.responses), selectinload(Invitation.author), selectinload(Invitation.school))
+    found = {i.id: i for i in db.scalars(q)}
+    return [found[i] for i in ids if i in found]
 
 
 @router.get("/api/invitations")
@@ -126,20 +152,22 @@ def feed(
     db: Session = Depends(get_db),
     me: User = Depends(current_user),
 ):
-    query = feed_query(me, blocked_pair_ids(db, me.id), interest, fmt, scope, sort)
-    items = list(db.scalars(query))
+    filters = feed_filters(me, blocked_pair_ids(db, me.id), interest, fmt, scope)
     needle = " ".join(q.lower().split())
     if needle:
-        items = [i for i in items if needle in i.title.lower()]
-    if has_spots:
-        items = [i for i in items if accepted_count(i) < i.max_participants]
-    if sort == "soon":
-        sort_by_date(items)
-    elif sort == "spots":
-        items.sort(key=lambda i: i.max_participants - accepted_count(i), reverse=True)
+        filters.append(title_filter(db, filters, needle))
+    stmt = select(Invitation.id).where(*filters)
+    taken = None
+    if has_spots or sort == "spots":
+        counts = accepted_counts()
+        stmt = stmt.outerjoin(counts, counts.c.invitation_id == Invitation.id)
+        taken = func.coalesce(counts.c.taken, 0)
+        if has_spots:
+            stmt = stmt.where(taken < Invitation.max_participants)
     if response is not None:
-        response.headers["X-Total-Count"] = str(len(items))
-    return [inv_out(i, me) for i in items[offset : offset + limit]]
+        response.headers["X-Total-Count"] = str(db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+    ids = list(db.scalars(stmt.order_by(*feed_order(sort, taken)).limit(limit).offset(offset)))
+    return [inv_out(i, me) for i in load_in_order(db, ids)]
 
 
 @router.get("/api/invitations/mine")

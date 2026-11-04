@@ -4,6 +4,7 @@ services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    command: ["postgres", "-c", "log_min_duration_statement=250"]
     environment:
       POSTGRES_DB: kto_so_mnoy
       POSTGRES_USER: kto

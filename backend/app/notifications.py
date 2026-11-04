@@ -267,11 +267,13 @@ async def tell(user_id: int, text: str, banned_ok: bool = False) -> None:
 
 
 def new_invitation_recipients(db: Session, inv: Invitation) -> list[int]:
-    q = select(User).where(User.notify.is_(True), User.banned.is_(False), User.id != inv.author_id, User.bot_state != "blocked")
+    q = select(User.id, User.interests).where(
+        User.notify.is_(True), User.banned.is_(False), User.id != inv.author_id, User.bot_state != "blocked", User.interests.contains(inv.interest, autoescape=True)
+    )
     if inv.city_id:
         q = q.where(User.city_id == inv.city_id)
     skip = blocked_pair_ids(db, inv.author_id)
-    interested = (u.id for u in db.scalars(q.order_by(User.id)) if inv.interest in u.interests.split(",") and u.id not in skip)
+    interested = (uid for uid, interests in db.execute(q.order_by(User.id)) if inv.interest in interests.split(",") and uid not in skip)
     return list(interested)[:MAX_NOTIFY_RECIPIENTS]
 
 
