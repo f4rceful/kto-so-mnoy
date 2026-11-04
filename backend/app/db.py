@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
@@ -14,13 +15,34 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     select,
+    text,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
 from .config import settings
 
 
-engine = create_engine(settings.database_url, pool_pre_ping=True)
+log = logging.getLogger(__name__)
+
+POOL_SIZE = 10
+POOL_OVERFLOW = 20
+POOL_TIMEOUT = 10
+POOL_RECYCLE = 1800
+
+
+def engine_options(url: str) -> dict:
+    options: dict = {"pool_pre_ping": True}
+    if make_url(url).get_backend_name() == "postgresql":
+        options |= {"pool_size": POOL_SIZE, "max_overflow": POOL_OVERFLOW, "pool_timeout": POOL_TIMEOUT, "pool_recycle": POOL_RECYCLE}
+    return options
+
+
+def live(where: str) -> dict:
+    return {"postgresql_where": text(where), "sqlite_where": text(where)}
+
+
+engine = create_engine(settings.database_url, **engine_options(settings.database_url))
 SessionLocal = sessionmaker(engine, expire_on_commit=False)
 
 
@@ -62,6 +84,7 @@ class School(Base):
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (Index("ix_users_city_id", "city_id"), Index("ix_users_school_id", "school_id"))
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     name: Mapped[str] = mapped_column(String(128), default="")
@@ -93,6 +116,12 @@ class User(Base):
 
 class Invitation(Base):
     __tablename__ = "invitations"
+    __table_args__ = (
+        Index("ix_invitations_author_id", "author_id"),
+        Index("ix_invitations_feed_school", "school_id", "created_at", **live("status = 'open' AND NOT hidden")),
+        Index("ix_invitations_feed_city", "city_id", "created_at", **live("status = 'open' AND NOT hidden")),
+        Index("ix_invitations_open_when", "when_date", **live("status = 'open' AND NOT hidden")),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     author_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
@@ -121,6 +150,10 @@ class Invitation(Base):
 
 class Response(Base):
     __tablename__ = "responses"
+    __table_args__ = (
+        Index("uq_responses_invitation_user", "invitation_id", "user_id", unique=True),
+        Index("ix_responses_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     invitation_id: Mapped[int] = mapped_column(ForeignKey("invitations.id"))
@@ -170,7 +203,11 @@ REPORT_REASONS = {
 
 class Report(Base):
     __tablename__ = "reports"
-    __table_args__ = (UniqueConstraint("invitation_id", "reporter_id"),)
+    __table_args__ = (
+        UniqueConstraint("invitation_id", "reporter_id"),
+        Index("ix_reports_reporter_id", "reporter_id"),
+        Index("ix_reports_open", "invitation_id", **live("NOT resolved")),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     invitation_id: Mapped[int] = mapped_column(ForeignKey("invitations.id"), index=True)
@@ -224,11 +261,24 @@ class Block(Base):
     blocked: Mapped[User] = relationship(foreign_keys=[blocked_id])
 
 
+def ensure_indexes() -> list[str]:
+    failed = []
+    for table in Base.metadata.sorted_tables:
+        for index in table.indexes:
+            try:
+                index.create(bind=engine, checkfirst=True)
+            except Exception:
+                failed.append(index.name)
+                log.exception("Не удалось создать индекс %s", index.name)
+    return failed
+
+
 def init_db() -> None:
     from .citylist import seed_builtin
     from .places import backfill_legacy_profiles
 
     Base.metadata.create_all(engine)
+    ensure_indexes()
     with SessionLocal() as session:
         seed_builtin(session)
         backfill_legacy_profiles(session)
